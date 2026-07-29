@@ -1,0 +1,68 @@
+name: Master E2E Test Suite (All 4 Tests)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  run-all-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    # --- 1. WEB SELENIUM TESTS ---
+    - name: Web - Install Dependencies
+      run: |
+        cd coordcamp-web
+        npm install
+    - name: Web - Run Selenium Tests
+      run: |
+        cd coordcamp-web
+        node selenium-tests/tests/login-tests.js
+
+    # --- 2. MOBILE APPIUM TESTS ---
+    - name: Mobile - Install Dependencies
+      run: |
+        cd coordcamp-android
+        npm install
+    - name: Mobile - Run Appium Tests
+      run: |
+        cd coordcamp-android
+        node appium-tests/app-tests.mjs
+
+    # --- 3. BASELINE LOAD TESTING ---
+    - name: Web - Run Load Testing
+      run: |
+        cd coordcamp-web
+        node load-test.js
+
+    # --- 4. COMPREHENSIVE SECURITY ASSESSMENT ---
+    - name: Web - Run Security Assessment
+      run: |
+        cd coordcamp-web
+        node security-tests/generate-security-reports.cjs
+
+    # --- COLLECT ALL ARTIFACTS ---
+    - name: Gather All Reports
+      run: |
+        mkdir -p ALL_TEST_REPORTS
+        cp coordcamp-web/Selenium_Login_Execution_Report.xlsx ALL_TEST_REPORTS/ 2>/dev/null || true
+        cp coordcamp-android/Appium_Mobile_Execution_Report.xlsx ALL_TEST_REPORTS/ 2>/dev/null || true
+        cp coordcamp-web/Load_Testing_Execution_Report.xlsx ALL_TEST_REPORTS/ 2>/dev/null || true
+        cp -r "coordcamp-web/Vulnerability Test Results/"* ALL_TEST_REPORTS/ 2>/dev/null || true
+
+    - name: Upload All Test Excel Reports to Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Complete_Master_Test_Reports
+        path: ALL_TEST_REPORTS/
